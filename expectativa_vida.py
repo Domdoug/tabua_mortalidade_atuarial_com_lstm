@@ -58,81 +58,84 @@ df_ambos[df_ambos['x'].astype(str).str.contains("80")].head()
 # sorted --> subslistas classificadas pelo atributo "Ano" --> x[7]
 df_to_lista = sorted(df_ambos.values.tolist(), key = lambda x: x[7])
 
-
-
 # FUNÇÕES ATUARIAIS
 
-def comutacao():
+def comutacao(FAj):
+    qx_add = []
+    qx_add_temp = []
     lx = []
     dx = []
     Lx = []
     Tx = []
-    exp = []
-    fx = 0.5
-    FAj = 100.0
-    lx.append(100000.0)
-    id_inicio = 0
-    w = 120 # idade limite, onde não haverá vivos
-
-    for idade in range(id_inicio, 80):
-        # primeiro passo
-        dx.append(qx[idade]*lx[idade]/1000.0)  # dx = qx[idade]*lx[idade]/1000.0
-        # segundo passo
-        lx.append(lx[idade]-dx[idade])  # lx[idade+1] = lx[idade] - dx[idade]
+    expx = []
     
-    for idade in range(80, w):
-        if lx[idade] != 0.0:
-            # terceiro passo
-            #lx[idade+2] = lx[idade+1]*(lx[idade+1]/(lx[idade]+FAj))
-            lx.append(lx[idade]*(lx[idade]/(lx[idade-1]+FAj)))
-        else:
-            w = idade
-            break        
-    
-    for idade in range(80, w):
-        # quarto passo
-        #dx[idade]=lx[idade]-lx[idade+1]
-        dx.append(lx[idade]-lx[idade+1])
-        # quinto passo
-        # qx[idade] = dx[idade]/lx[idade]
-        qx.append(dx[idade]/lx[idade]*1000.0)
-
-    for idade in range(id_inicio, w):
-        # sexto passo. PAREI AQUI. OUT OF BOUND
-        # Lx[idade] = fx*lx[idade] + (1 - fx)*lx[idade+1]
-        Lx.append(fx*lx[idade] + (1 - fx)*lx[idade+1])
-    
-    for idade in range(id_inicio, w):
-        if lx[idade] != 0.0:
-            # setimo passo
-            # Tx = sum(Lx[idade:])
-            Tx.append(sum(Lx[idade:]))
-            # oitavo passo
-            # exp = Tx[idade]/lx[idade]
-            exp.append(Tx[idade]/lx[idade])
-        else:
-            break
-
-    return qx, dx, lx, Lx, Tx, exp, FAj
-
-
-# O segundo elemento é o que se espera atingir
-def expectResidual(idade, exp_ant, Tx, lx_1, lx_2 ):
-
-    erro = exp[79] - exp_ant
-    return abs(erro)
-
-def comutacao_res(FAj):
-    lx = []
-    dx = []
-    Lx = []
-    Tx = []
-    exp = []
     fx = 0.5
     #FAj = 100.0
     lx.append(100000.0)
     id_inicio = 0
     w = 120 # idade limite, onde não haverá vivos
+    qx_add_temp.append(qx)
+    qx_add = [*qx_add_temp[0]]
+    
+    for idade in range(id_inicio, 80):
+        # primeiro passo
+        dx.append(qx[idade]*lx[idade]/1000.0)  # dx = qx[idade]*lx[idade]/1000.0
+        # segundo passo
+        lx.append(lx[idade]-dx[idade])  # lx[idade+1] = lx[idade] - dx[idade]
+    
+    for idade in range(80, w):
+        if lx[idade] != 0.0:
+            # terceiro passo
+            #lx[idade+2] = lx[idade+1]*(lx[idade+1]/(lx[idade]+FAj))
+            lx.append(lx[idade]*(lx[idade]/(lx[idade-1]+FAj)))
+        else:
+            w = idade
+            break        
+    
+    for idade in range(80, w):
+        # quarto passo
+        #dx[idade]=lx[idade]-lx[idade+1]
+        dx.append(lx[idade]-lx[idade+1])
+        # quinto passo
+        # qx[idade] = dx[idade]/lx[idade]
+        qx_add.append(dx[idade]/lx[idade]*1000.0)
+
+    for idade in range(id_inicio, w):
+        # sexto passo.
+        # Lx[idade] = fx*lx[idade] + (1 - fx)*lx[idade+1]
+        Lx.append(fx*lx[idade] + (1 - fx)*lx[idade+1])
+    
+    for idade in range(id_inicio, w):
+        if lx[idade] != 0.0:
+            # setimo passo
+            # Tx = sum(Lx[idade:])
+            Tx.append(sum(Lx[idade:]))
+            # oitavo passo
+            # exp = Tx[idade]/lx[idade]
+            expx.append(Tx[idade]/lx[idade])
+        else:
+            break
+
+    return idade, qx_add, dx, lx, Lx, Tx, expx
+
+
+def comutacao_res(FAj):
+    qx_add = []
+    qx_add_temp = []
+    lx = []
+    dx = []
+    Lx = []
+    Tx = []
+    expx = []
+    
+    fx = 0.5
+    #FAj = 100.0
+    lx.append(100000.0)
+    id_inicio = 0
+    w = 120 # idade limite, onde não haverá vivos
+    qx_add_temp.append(qx)
+    qx_add = [*qx_add_temp[0]]
+
 
     for idade in range(id_inicio, 80):
         # primeiro passo
@@ -155,10 +158,10 @@ def comutacao_res(FAj):
         dx.append(lx[idade]-lx[idade+1])
         # quinto passo
         # qx[idade] = dx[idade]/lx[idade]
-        qx.append(dx[idade]/lx[idade]*1000.0)
+        qx_add.append(dx[idade]/lx[idade]*1000.0)
 
     for idade in range(id_inicio, w):
-        # sexto passo. PAREI AQUI. OUT OF BOUND
+        # sexto passo.
         # Lx[idade] = fx*lx[idade] + (1 - fx)*lx[idade+1]
         Lx.append(fx*lx[idade] + (1 - fx)*lx[idade+1])
     
@@ -169,106 +172,68 @@ def comutacao_res(FAj):
             Tx.append(sum(Lx[idade:]))
             # oitavo passo
             # exp = Tx[idade]/lx[idade]
-            exp.append(Tx[idade]/lx[idade])
+            expx.append(Tx[idade]/lx[idade])
         else:
             break
 
-    erro = exp[79] - target
+    erro = expx[79] - targetx
     return abs(erro)
 
+# Função para unir as listas em linha
+def unirSeries(df, explode):
+    idx = df.index.repeat(df[explode[0]].str.len())
+    df1 = pd.concat([
+        pd.DataFrame({x: np.concatenate(df[x].values)}) for x in explode], axis=1)
+    df1.index = idx
+
+    return df1.join(df.drop(explode, 1), how='left')
 
 
-
-#ano = 2015 para testar 2015, i=17
 dados = []
-fajs = []
-dados_final = pd.DataFrame()
-#fx = 0.5
-# id_inicio = 0 # para a interpolação. Correção: colocar 0
-
-#colunas = list(df_teste)
+vetor_fatores = []
+fatores_lista = []
+vetor_dados = []
+dados_lista = [] # np.empty((8,0)).tolist()
 ano = 1997
 inicio = 0
-for i in range(0,21):
+idade = []
+ano_rept = []
+
+for i in range(0,21): # Leitura de cada arquivo desde 1997
     ano += 1
     # intervalos de cada tabela de dados para cada ano
     fim = 81*(i+1)
     dados = df_to_lista[inicio:fim]
     inicio = fim
+    FAj = 100.0
     
-    # FAj = 100.0 # Faz a primeira tentativa100.0 # 231.59552332036
     # qx das tabelas do IBGE até 79 anos
     qx = [item[1] for item in dados][:-1]
-    target = dados[79][6] # Expectativa de vida aos 80, na tabela do IBGE
+    targetx = dados[79][6] # Expectativa de vida aos 80, na tabela do IBGE
 
-    # for idade in range(id_inicio, w): #colocar um stop de 150 para o range
-        # qx = dados[0][1]  # qx até os 79 anos. Tabela fornecida IBGE
-        #qx(idade)
+    sol = optimize.minimize_scalar(comutacao_res) # , args=(FAj) se existissem mais outros parametros, usar args
 
-        #dx = map(dx,qx) #dx(idade, qx)
-        
-        #if idade==80:
-            # Tx = dados[idade][5]
-        #    lx_1 = dados[idade-1][3]
-        #    lx_2 = dados[idade-2][3]
-        #    lx = dados[idade][3]
-        #    lx1 = lx_1 * (lx_1 / lx_2 + FAj)
-        #    Lx = fx * lx + (1 - fx) * lx1
-            # exp_ant = dados[idade][6]  # Expectativa a ser alcançada 
+    #sol.fun # erro / #sol.x # fator / #sol.sucess # sucesso /  #sol.nit # numero de iterações
+    vetor_fatores = [str(ano), sol.x, sol.nit, sol.fun, sol.success]
+    # aplicar append, pois é uma lista de uma lista de valores por vez
+    fatores_lista.append(vetor_fatores) 
 
-            
-            #exp_calc = Tx / (lx_1 * (lx_1 / lx_2 + FAj))
+    x, qx_add, dx, lx, Lx, Tx, expx = comutacao(sol.x)
 
-            # sol = optimize.minimize_scalar(expectResidual, args=(exp_calc, Tx, lx_1, lx_2))
-    qx, dx, lx, Lx, Tx, exp, FAj = comutacao()
-    
-    sol = optimize.minimize_scalar(comutacao_res) # , args=(FAj)
+    idade = np.arange(0, x+1).tolist() #list(range(0, idade+1))
+    ano_rept = np.repeat(ano, x+1).tolist()
 
-    # qx, dx, lx, Lx, Tx, exp, FAj = comutacao_res(id_inicio)           
-            #lx1 = lx * (lx / (lx_1 + FAj))
-            #dx = lx - lx1
-            #qx_mil = dx / lx * 1000
-            #Lx = fx * lx + (1 - fx) * lx1
+    vetor_dados = [idade, qx_add, dx, lx[:-1], Lx, Tx, expx, ano_rept]
+    # Aplicar extend para gravar as comutações, pois é uma lista de listas de valores
+    dados_lista.append(vetor_dados)
+#    df_dados_lista = df_dados_lista.append(pd.DataFrame(dados_lista))
 
-            #exp = Tx / lx
-                
-            #valores = [idade, qx_mil, dx, lx, Lx, Tx, exp, str(ano)]
-            #dados[idade] = valores
-
-        #else:
-        #    lx_2 = dados[idade-2][3]
-        #    lx_1 = dados[idade-1][3]
-
-            #lx = lx_1 * (lx_1 / (lx_2 + FAj))
-            #lx1 = lx * (lx / (lx_1 + FAj))
-            #dx = lx - lx1
-            #if lx != 0:
-            #    qx_mil = dx / lx * 1000
-            #    Lx = fx * lx + (1 - fx) * lx1
-            #    Tx = dados[idade-1][5] - dados[idade-1][4]
-            #    exp = Tx / lx
-            #    valores = [idade, qx_mil, dx, lx, Lx, Tx, exp, str(ano)]
-            #else:
-            #    qx_mil = 0    
-            #    Lx = 0
-            #    Tx = 0
-            #    exp = 0
-            #    valores = [idade, qx_mil, dx, lx, Lx, Tx, exp, str(ano)]
-            # grava na lista
-            #dados.append(valores)
-            #fajs.append[FAj_result]
+# Salva no Dataframel
+df_fatores = pd.DataFrame(fatores_lista, columns=['ano', 'fator_ajuste', 'num_interacoes', 'erro', 'converge'])
+#df_dados = df_dados.transpose()
+#df_dados.columns = list(df_ambos)
+df_temp = pd.DataFrame(dados_lista, columns=['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
+df_dados = unirSeries(df_temp,['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
+df_dados = df_dados.reset_index(drop=True) 
 
 
-
-
-
-    # Grava no DataFrame
-    dados_final = dados_final.append(dados)
-
-
-
-
-
-colunas = list(df_ambos)
-dados_final.columns = colunas
-dados_final.to_excel('arquivo4.xls')
