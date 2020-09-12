@@ -3,27 +3,89 @@ import pandas as pd
 import numpy as np
 import os
 from scipy import optimize
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Verifica a pasta corrente
 pasta = os.getcwd()
 
 # Junta caminho corrente + pasta com os arquivos "ambos", "homens", "mulheres"
 pasta_ambos = os.path.join(pasta, "ambos")
-#pasta_mulheres = os.path.join(pasta, "mulheres")
-#pasta_homens = os.path.join(pasta, "homens")
+pasta_mulheres = os.path.join(pasta, "mulheres")
+pasta_homens = os.path.join(pasta, "homens")
 
 # Lista arquivos das pastas
 arquivos_ambos = os.listdir(pasta_ambos)
-#arquivos_mulheres = os.listdir(pasta_mulheres)
-#arquivos_homens = os.listdir(pasta_homens)
+arquivos_mulheres = os.listdir(pasta_mulheres)
+arquivos_homens = os.listdir(pasta_homens)
 
 # Lista os arquivos somente excel e que comecem com 'ambos', 'homens', 'mulheres'
 arq_ambos_xls = [arq_ambos for arq_ambos in arquivos_ambos if arq_ambos[-3:]=='xls']
-#arq_mulher_xls = [arq_mulher for arq_mulher in arquivos_mulheres if arq_mulher[-3:]=='xls']
-#arq_homem_xls = [arq_homem for arq_homem in arquivos_homens if arq_homem[-3:]=='xls']
+arq_mulher_xls = [arq_mulher for arq_mulher in arquivos_mulheres if arq_mulher[-3:]=='xls']
+arq_homem_xls = [arq_homem for arq_homem in arquivos_homens if arq_homem[-3:]=='xls']
 
 len(arq_ambos_xls)
 
+# ==================== INICIO FEMININO =================
+# # Inicializa o dataframe vazio
+df_mulher = pd.DataFrame()
+
+# Dataframe mulher
+pular_linhas1 = list(range(0,5)) + list(range(46,62)) + list(range(103,113))
+pular_linhas2 = list(range(0,5)) + list(range(46,61)) + list(range(102,113))
+pular_linhas3 = list(range(0,4)) + list(range(45,61)) + list(range(102,113))
+# 2003: pular_linhas2 = list(range(0,4)) + list(range(45,61)) + list(range(101,113))
+colunas = ['x', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'Ex']
+
+for arq_mulher in arq_mulher_xls:
+    ano = arq_mulher[-8:-4]
+    if ano in ['1998', '1999']: 
+        pular_linhas = pular_linhas2
+    elif ano in ['2003']:
+        pular_linhas = pular_linhas3
+    else:
+        pular_linhas = pular_linhas1
+    dados=pd.read_excel(os.path.join(pasta_mulheres, arq_mulher),
+                        names = colunas,
+                        skiprows = pular_linhas,
+                        usecols = "A:G").assign(Ano=ano)
+    df_mulher = df_mulher.append(dados)
+
+# Tratamento da idade 80+ para os anos.
+df_mulher.loc[80,'x'] = 80
+# Aproveitar e corrigir o qx aos 80 anos de alguns arquivos
+df_mulher.loc[80,'qx_mil'] = 1000.0
+
+# ==================== FIM FEMININO =================
+# ==================== INICIO MASCULINO =================
+# Inicializa o dataframe vazio
+df_homem = pd.DataFrame()
+
+# Dataframe ambos
+pular_linhas1 = list(range(0,5)) + list(range(46,62)) + list(range(103,113))
+pular_linhas2 = list(range(0,5)) + list(range(46,61)) + list(range(102,113))
+colunas = ['x', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'Ex']
+
+for arq_homem in arq_homem_xls:
+    ano = arq_homem[-8:-4]
+    if ano in ['1998', '1999']:
+        pular_linhas = pular_linhas2
+    else:
+        pular_linhas = pular_linhas1
+    
+    dados=pd.read_excel(os.path.join(pasta_homens, arq_homem),
+                        names = colunas,
+                        skiprows = pular_linhas,
+                        usecols = "A:G").assign(Ano=ano)
+    df_homem = df_homem.append(dados)
+
+# Tratamento da idade 80+ para os anos.
+df_homem.loc[80,'x'] = 80
+# Aproveitar e corrigir o qx aos 80 anos de alguns arquivos
+df_homem.loc[80,'qx_mil'] = 1000.0
+
+# ==================== FIM MASCULINO =================
+# ========================== INICIO AMBOS ========================
 # Inicializa o dataframe vazio
 df_ambos = pd.DataFrame()
 
@@ -51,6 +113,45 @@ df_ambos.loc[80,'x'] = 80
 df_ambos.loc[80,'qx_mil'] = 1000.0
 
 df_ambos[df_ambos['x'].astype(str).str.contains("80")].head()
+
+# ======================FIM AMBOS============================
+
+# =============== GRAFICOS INICIO =====================
+# Grafico de lx
+# agrega os dataframes, identificando todos
+frames = [df_mulher, df_homem, df_ambos]
+df_agregado = pd.concat(frames, keys=['mulher', 'homem', 'ambos'], names=['sexo', 'IdLinha']).reset_index()
+df_agregado = df_agregado.query("x != 80")
+df_agregado['qx_prob'] = df_agregado['qx_mil']/1000.0
+
+# grafico de sobreviventes - lx
+sns.set_style("darkgrid")
+graf = sns.FacetGrid(df_agregado, col="sexo", hue="Ano")
+graf.map(sns.lineplot, "x", "lx")
+graf.add_legend()
+graf.set_xlabels("idade")
+graf.set_ylabels("Sobreviventes")
+
+# grafico - probabilidade de morte
+graf = sns.FacetGrid(df_agregado, col="sexo", hue="Ano")
+graf.map(sns.lineplot, "x", "qx_prob")
+graf.add_legend()
+graf.set_xlabels("idade")
+graf.set_ylabels("Prob. Morte")
+
+# Grafico de Expecativa de vida ao nascer
+# Dataframe com x = 0
+#sns.set() #reset o seaborn
+
+df_agregado_0 = df_agregado.query("x == 0")
+graf_0 = sns.lineplot('Ano', 'Ex', ci=None, data=df_agregado_0)
+graf_0.set_title("Expectativa de vida ao nascer")
+graf_0.set_ylabel('Idade')
+plt.xticks(rotation=45)
+graf_0.plot()
+
+# =============== GRAFICOS FIM =====================
+
 
 # Para classificar por ano
 #linha_anterior = sorted(df_ambos.loc[79,:].values.tolist(), key=lambda x: x[7])
@@ -234,6 +335,34 @@ df_fatores = pd.DataFrame(fatores_lista, columns=['ano', 'fator_ajuste', 'num_in
 #df_dados.columns = list(df_ambos)
 df_temp = pd.DataFrame(dados_lista, columns=['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
 df_dados = unirSeries(df_temp,['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
-df_dados = df_dados.reset_index(drop=True) 
+df_dados = df_dados.reset_index(drop=True)
 
+# ============== INICIO GRAFICOS =======================
+# grafico de sobreviventes - lx
+sns.set_style("darkgrid")
+graf = sns.lineplot(data=df_dados, x="idade", y="lx", hue="ano")
+graf.set_title("Quantidade de vidas")
+#graf.set_xlabel("idade")
+graf.set_ylabel("Sobreviventes")
+
+# grafico - probabilidade de morte
+graf = sns.lineplot(data=df_dados, x="idade", y="qx_mil", hue="ano")
+graf.set_title("Quantidade de mortos")
+ylabels = ['{:,.3f}'.format(y) for y in graf.get_xticks()/100]
+graf.set_yticklabels(ylabels)
+graf.set_ylabel("Prob. Morte")
+
+# Grafico de Expecativa de vida ao nascer
+# Dataframe com x = 0
+# eixo y:expectativa de vida ao nascer. idade=0. todos os anos (eixo x)
+
+df_dadosx_0 = df_dados.query("idade == 0")
+df_dadosx_0['ano'] = df_dadosx_0['ano'].astype(str)
+graf_0 = sns.lineplot('ano', 'expx', ci=None, data=df_dadosx_0)
+graf_0.set_title("Expectativa de vida ao nascer")
+graf_0.set_ylabel('Expectativa vida em anos')
+plt.xticks(rotation=45)
+plt.show()
+
+# ============== FIM GRAFICOS =======================
 
