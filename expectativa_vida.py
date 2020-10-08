@@ -338,19 +338,32 @@ for i in range(0,21):
     vetor_dados = [idade, qx_add, dx, lx[:-1], Lx, Tx, expx, ano_rept]
     # Aplicar extend para gravar as comutações, pois é uma lista de listas de valores
     dados_lista.append(vetor_dados)
-#    df_dados_lista = df_dados_lista.append(pd.DataFrame(dados_lista))
+
 
 # Salva no Dataframel
 w_max = max(w)
+w_min = min(w)
+# DataFrame dos fatores
 df_fatores = pd.DataFrame(fatores_lista, columns=['ano', 'fator_ajuste', 'num_interacoes', 'erro', 'converge'])
-#df_dados = df_dados.transpose()
-#df_dados.columns = list(df_ambos)
-# df_temp: df_temp.shape -> 21,8. vetor das variáveis em cada linha 
-df_temp = pd.DataFrame(dados_lista, columns=['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
-df_dados = unirSeries(df_temp,['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano'])
-# df_dados.shape -> (2421,8). Desfeito vetor. Variaveis ao longo das linhas
-df_dados = df_dados.reset_index(drop=True)
 
+# Tratamento do DataFrame dos dados
+features = ['idade', 'qx_mil', 'dx', 'lx', 'Lx', 'Tx', 'expx', 'ano']
+# DataFrame base para forçar os dataframes de dados com o mesmo shape
+df_formato = pd.DataFrame(np.empty(shape=(w_max+1,len(features))), columns= features)
+
+# DataFrame dos dados
+df_temp = pd.DataFrame(dados_lista, columns=features) # shape(21, 8)
+df_unidos = unirSeries(df_temp,features) # shape(2421, 8)
+# trecho do código para padronizar para as tabuas para o mesmo comprimento para o LSTM 
+df_dados = pd.DataFrame()
+for i in range(0,21):
+    df_temp2 = df_unidos.loc[i].set_index('idade').reset_index().reindex_like(df_formato, method='ffill')
+    df_dados = df_dados.append(df_temp2)
+# com o uso do método ffill do reindex_like repete a última linha disponível, não será isso que queremos com a idade    
+df_dados.drop(columns=['idade'], inplace=True) # shape(2457, 7)
+# aproveitar o incremento do index para usar na feature 'idade'
+df_dados = df_dados.reset_index()
+df_dados.rename(columns={'index':'idade'}, inplace=True) # shape(2457, 8)
 
 # ============== INICIO GRAFICOS =======================
 # grafico de sobreviventes - lx
@@ -391,22 +404,18 @@ plt.show()
 # ============== FIM GRAFICOS =======================
 
 # Preparar o DataFrame para o LSTM
-#lista_temp = df_temp.values
-#lista_temp = df_temp.values.tolist()
-#tamanho = [len(n) for n in lista_temp[)][1]] # tamanho de cada sublista
-#menor = min(tamanho) # menor valor entre as sublistas
 df_lstm = df_dados[['ano','idade','qx_mil', 'lx']].copy()
 # deletar as linhas onde idade >=113 (menor tamanho)
-indexNames = df_lstm[df_lstm['idade']>=113].index
-df_lstm.drop(indexNames, inplace=True)
-df_lstm = df_lstm.reset_index(drop=True)
+#indexNames = df_lstm[df_lstm['idade']>w_min].index
+#df_lstm.drop(indexNames, inplace=True)
+#df_lstm = df_lstm.reset_index(drop=True)
 df_lstm['xt'] = df_lstm['ano'].astype(str) + '_' + df_lstm['idade'].astype(str)
 df_lstm['qx_prob'] = df_lstm['qx_mil']/1000.0
 
 # ====================== GRAFICO ========================
 # # Gráfico temporal matplotlib. Seaborn demora muito a renderizar
 #plt.style.use('seaborn-whitegrid')
-
+# TALVEZ EXCLUIR
 ax = plt.axes()
 ax.plot('xt','qx_prob', data=df_lstm)
 ax.set_title('Probabilidade de morte - Periodo 1999-2018')
@@ -430,7 +439,7 @@ plt.ylabel('População')
 # plt.gca().axes.get_yaxis().set_visible(False)
 plt.gca().axes.xaxis.set_ticklabels([])
 plt.gca().axes.yaxis.set_ticklabels([])
-plt.savefig('grafico_exp3.png')
+# plt.savefig('grafico_exp3.png')
 plt.show()
 
 
@@ -594,9 +603,9 @@ series = df_lstm['qx_prob'].copy()  # series = read_csv('sales_year.csv', usecol
 
 # inicio do cronometro do processamento
 start = time.time()
-n_lag = 113 # 1 # 113 corresponde a uma tábua(idade de 0 a 113. No caso um ano.
+n_lag = w_max+1 #113 # 1 # 113 corresponde a uma tábua(idade de 0 a 113. No caso um ano.
 n_seq = 10 # 5 # 3 # número de anos adiante
-n_test = 113 # 791 # Agora simulacao com 33 % teste = 791 (7 anos) / 113 => corresponde ao ano de 2018 como teste # 10
+n_test = w_max+1 # 113 # 791 # Agora simulacao com 33 % teste = 791 (7 anos) / 113 => corresponde ao ano de 2018 como teste # 10
 n_epochs = 30 # 1500
 n_batch = 1
 n_neurons = 50 #50
