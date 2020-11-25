@@ -2,4 +2,4 @@
 
 # Método Lee-Carter aplicado nas tábuas do IBGE
 
-# Redes Nerais LSTM - Long Short-Term Memory
+# Redes Neurais LSTM - Long Short-Term Memory
