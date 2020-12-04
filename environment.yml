@@ -1,0 +1,16 @@
+name: deeplearning
+channels:
+  - defaults
+dependencies:
+  - keras
+  - jupyter
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - seaborn
+  - xlrd
+  - pylint
+  - pmdarima
+  - sympy
+  - openpyxl
+prefix: /home/doug/anaconda3/envs/deeplearning
