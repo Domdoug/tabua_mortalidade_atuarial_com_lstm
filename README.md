@@ -3,4 +3,3 @@
 # Método Lee-Carter aplicado nas tábuas do IBGE
 
 # Redes Neurais LSTM - Long Short-Term Memory
-
